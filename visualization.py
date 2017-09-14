@@ -49,6 +49,7 @@ data_test = pd.read_csv('test.csv')
 # quick look at data
 print data.head()
 data.info()
+data_test.info()
 #print data.describe()
 
 # visualisation
@@ -81,7 +82,7 @@ def data_visualisation(data):
     my_table.plot.bar(stacked = True)
 
 
-vis = 1
+vis = 0
 if vis ==1:
     data_visualisation(data)
 
@@ -99,7 +100,7 @@ print explore['Street'].value_counts()
 # print pd.isnull(explore['FireplaceQu']).sum()
 plt.figure()
 explore['LotFrontage'].plot.hist(bins =50)
-plt.show()
+
 
 # candidates for neew feature
 
@@ -110,3 +111,11 @@ plt.show()
 # print corr_matrix['SalePrice'].sort_values(ascending = False)
 # corr_matrix_1 = explore[['GrLivArea', '1stFlrSF']].corr()
 # print corr_matrix_1
+plt.figure()
+explore.boxplot(column = 'SalePrice', by = 'MoSold')
+
+out1 = explore[explore['GrLivArea'] > 4000]
+print out1['TotalBsmtSF']
+
+
+plt.show()
