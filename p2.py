@@ -14,12 +14,17 @@ from sklearn.metrics import mean_squared_error
 from sklearn.model_selection import train_test_split
 import matplotlib.pyplot as plt
 from sklearn.model_selection import cross_val_score
+from sklearn.model_selection import cross_val_predict
 from sklearn.model_selection import GridSearchCV
 from sklearn.linear_model import ElasticNet
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.ensemble import GradientBoostingRegressor
+from sklearn.ensemble import AdaBoostRegressor
 from sets import Set
 from scipy.stats import skew
+from sklearn.tree import DecisionTreeRegressor
+from sklearn.decomposition import PCA
+from sklearn.linear_model import Lasso
 import os
 os.system('clear')
 
@@ -34,7 +39,10 @@ data = data_train.copy()
 # seperate X nad y
 y_train = data['SalePrice']
 X_train = data.drop(['Id','SalePrice'], axis = 1)
-
+select_indice = (X_train['GrLivArea'] < 4000)
+print select_indice
+X_train = X_train[select_indice]
+y_train = y_train[select_indice]
 X_train.info()
 
 def modify_type(X):
@@ -183,23 +191,6 @@ att_none_to_0 = [x for x in  Set(att_missing_1).intersection(Set(num_features))]
 # meanssing value that None means NO(categirical )
 att_none_to_no = [x for x in  Set(att_missing_1).intersection(Set(cat_features))]
 
-# check_pipeline1 = Pipeline([\
-# ('num_selector',DataFrameSelector(num_features)),\
-# ('missing1', fill_missing_1(attr_list = att_none_to_0, fill_by = 0)),
-# ])
-# x1 = check_pipeline1.fit_transform(X_train.copy())
-# x1.to_csv('cat-data.csv')
-# num_features = x1.columns
-#
-# check_pipeline2 = Pipeline([\
-# ('cat_selector', DataFrameSelector(cat_features)),
-# ('missing1', fill_missing_1(attr_list = att_none_to_no, fill_by = "NOO")),
-# ('encode', my_OnehotEncoding()),
-# ])
-# x2 = check_pipeline2.fit_transform(X_train)
-# x2.to_csv('num_data.csv')
-# cat_features = x2.columns
-
 
 
 num_pipeline = Pipeline([\
@@ -249,15 +240,43 @@ y_log = np.log1p(y)
 # plt.plot(a,'b')
 # plt.plot(b, 'r')
 
-# from sklearn.linear_model import Ridge
-# ridge = Ridge(random_state = 42)
-# param_grid = {'alpha' : [.03,.1,1,.3,1,3,10]}
+from sklearn.linear_model import Ridge
+ridge = Ridge(random_state = 42, alpha = 16)
+# param_grid = {'alpha' : [15,16,17]}
 # grid = GridSearchCV(estimator = ridge, param_grid = param_grid,
 # scoring = 'neg_mean_squared_error', cv = 5, refit = True)
 # grid.fit(X_train_prepared , y_log)
 # for score, param in zip(grid.cv_results_['mean_test_score'],grid.cv_results_['params']):
 #     print (np.sqrt(-score), param)
 # print grid.best_params_
+
+prediction_1 = cross_val_predict(ridge, X_train_prepared, y=y_log,
+ cv=5)
+print np.sqrt(mean_squared_error(y_log, prediction_1))
+plt.figure()
+plt.plot(np.arange(len(y_log)), y_log, 'bo')
+
+plt.plot(np.arange(len(y_log)), prediction_1, 'go')
+
+
+# lasso = Lasso(random_state = 42)
+# param_grid = {'alpha' : [.0003,.0005,.0007,.0009]}
+# grid = GridSearchCV(estimator = lasso, param_grid = param_grid,
+# scoring = 'neg_mean_squared_error', cv = 5, refit = True)
+# grid.fit(X_train_prepared , y_log)
+# for score, param in zip(grid.cv_results_['mean_test_score'],grid.cv_results_['params']):
+#     print (np.sqrt(-score), param)
+# print grid.best_params_
+
+lasso = Lasso(random_state = 42, alpha = .0005)
+prediction_2 = cross_val_predict(lasso, X_train_prepared, y=y_log,
+ cv=5)
+print np.sqrt(mean_squared_error(y_log, prediction_2))
+plt.figure()
+plt.plot(np.arange(len(y_log)), y_log, 'bo')
+
+plt.plot(np.arange(len(y_log)), prediction_2, 'go')
+
 
 
 # elastic = ElasticNet(random_state = 42,)
@@ -292,19 +311,26 @@ y_log = np.log1p(y)
 #     print i
 
 
-grb_reg = GradientBoostingRegressor(random_state = 42)
-param_grid = {'learning_rate' : [.05,.1,.5], 'n_estimators' :[10, 100, 500,1000]}
-grid = GridSearchCV(estimator = grb_reg, param_grid = param_grid,
-scoring = 'neg_mean_squared_error', cv = 5, refit = True)
-grid.fit(X_train_prepared , y_log)
-for score, param in zip(grid.cv_results_['mean_test_score'],grid.cv_results_['params']):
-    print (np.sqrt(-score), param)
-print grid.best_params_
+# grb_reg = GradientBoostingRegressor(random_state = 42)
+# param_grid = {'learning_rate' : [.05,.1,.5], 'n_estimators' :[10, 100, 500,1000]}
+# grid = GridSearchCV(estimator = grb_reg, param_grid = param_grid,
+# scoring = 'neg_mean_squared_error', cv = 5, refit = True)
+# grid.fit(X_train_prepared , y_log)
+# for score, param in zip(grid.cv_results_['mean_test_score'],grid.cv_results_['params']):
+#     print (np.sqrt(-score), param)
+# print grid.best_params_
 ##best result = (1000, .05), 25800 near to (500, .1) = 26200
 
 #
-# grb_reg = GradientBoostingRegressor(random_state = 42, learning_rate = .1,
-# n_estimators = 500)
-# score_log = cross_val_score(grb_reg, X_train_prepared, y=y_log,
-# scoring='neg_mean_squared_error', cv=10)
-# print np.sqrt(-score_log.mean())
+grb_reg = GradientBoostingRegressor(random_state = 42, learning_rate = .05,
+n_estimators = 500)
+prediction_3 = cross_val_predict(grb_reg, X_train_prepared, y=y_log,
+ cv=5)
+print np.sqrt(mean_squared_error(y_log, prediction_3))
+plt.figure()
+plt.plot(np.arange(len(y_log)), y_log, 'bo')
+
+plt.plot(np.arange(len(y_log)), prediction_3, 'go')
+
+
+plt.show()
