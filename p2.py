@@ -49,7 +49,7 @@ y_train = y_train[select_indice]
 
 # this is how objectiv is defined
 y = y_train.values.reshape(-1,1)
-y_log = np.log1p(y)
+y_log = np.log(y)
 
 def modify_type(X):
     ''' some features are originally categorical but represented as numerical
@@ -185,6 +185,14 @@ class skew_data(BaseEstimator, TransformerMixin):
         X[self.skew_attr_] = np.log1p(X[self.skew_attr_])
         return X
 
+class custom_feature_eng(BaseEstimator, TransformerMixin):
+    def __init__(self):
+    def fit(self, X, y = None):
+        return self
+    def transform(self, X, y = None):
+ 
+        return
+
 #
 ### handling missing data
 # number of missing values for each feature
@@ -232,9 +240,10 @@ cat_pipeline = Pipeline([\
 ])
 #
 # # #
-full_pipeline = FeatureUnion(transformer_list = [\
-('num_pipeline', num_pipeline),
-('cat_pipeline', cat_pipeline),\
+full_pipeline = Pipeline([\
+('feature_eng', ),
+FeatureUnion(transformer_list = \
+[('num_pipeline', num_pipeline),('cat_pipeline', cat_pipeline)])\
 ])
 #
 X_train_prepared = full_pipeline.fit_transform(X_train)
@@ -320,18 +329,18 @@ total_attributes = list(num_attributes) + list(cat_attributes)
 #     print (np.sqrt(-score), param)
 # print grid.best_params_
 # # alpha , l1_ratio = .0003, 1.7,
-elastic = ElasticNet(random_state = 42, alpha = .0003, l1_ratio = 1.7)
-prediction_2 = cross_val_predict(elastic, X_train_prepared, y=y_log,
- cv=5)
-print np.sqrt(mean_squared_error(y_log, prediction_2))
-elastic = ElasticNet(random_state = 42, alpha = .0003, l1_ratio = 1.7)
-elastic.fit(X_train_prepared, y_log)
-prediction_train_log = elastic.predict(X_train_prepared)
-print np.sqrt(mean_squared_error(y_log, prediction_train_log))
-prediction_test_log = elastic.predict(X_test_prepared)
-prediction_test = np.exp(prediction_test_log) - 1
-a = np.asarray(prediction_test)
-np.savetxt("run2.csv", a, delimiter=",")
+# elastic = ElasticNet(random_state = 42, alpha = .0003, l1_ratio = 1.7)
+# prediction_2 = cross_val_predict(elastic, X_train_prepared, y=y_log,
+#  cv=5)
+# print np.sqrt(mean_squared_error(y_log, prediction_2))
+# elastic = ElasticNet(random_state = 42, alpha = .0003, l1_ratio = 1.7)
+# elastic.fit(X_train_prepared, y_log)
+# prediction_train_log = elastic.predict(X_train_prepared)
+# print np.sqrt(mean_squared_error(y_log, prediction_train_log))
+# prediction_test_log = elastic.predict(X_test_prepared)
+# prediction_test = np.exp(prediction_test_log) - 1
+# a = np.asarray(prediction_test)
+# np.savetxt("run2.csv", a, delimiter=",")
 #
 #
 # # rnd_reg = RandomForestRegressor(random_state = 42, n_jobs = -1)
@@ -355,26 +364,36 @@ np.savetxt("run2.csv", a, delimiter=",")
 # #     print i
 #
 #
-# # grb_reg = GradientBoostingRegressor(random_state = 42)
-# # param_grid = {'learning_rate' : [.05,.1,.5], 'n_estimators' :[10, 100, 500,1000]}
-# # grid = GridSearchCV(estimator = grb_reg, param_grid = param_grid,
-# # scoring = 'neg_mean_squared_error', cv = 5, refit = True)
-# # grid.fit(X_train_prepared , y_log)
-# # for score, param in zip(grid.cv_results_['mean_test_score'],grid.cv_results_['params']):
-# #     print (np.sqrt(-score), param)
-# # print grid.best_params_
-# ##best result = (1000, .05), 25800 near to (500, .1) = 26200
+# grb_reg = GradientBoostingRegressor(random_state = 42)
+# param_grid = {'learning_rate' : [.01,.05,.1,.5], 'n_estimators' :[10, 100, 500,1000]}
+# grid = GridSearchCV(estimator = grb_reg, param_grid = param_grid,
+# scoring = 'neg_mean_squared_error', cv = 5, refit = True)
+# grid.fit(X_train_prepared , y_log)
+# for score, param in zip(grid.cv_results_['mean_test_score'],grid.cv_results_['params']):
+#     print (np.sqrt(-score), param)
+# print grid.best_params_
+# ##best result (500, .05) 0.11644
 #
 # #
-# grb_reg = GradientBoostingRegressor(random_state = 42, learning_rate = .05,
-# n_estimators = 500)
-# prediction_3 = cross_val_predict(grb_reg, X_train_prepared, y=y_log,
-#  cv=5)
-# print np.sqrt(mean_squared_error(y_log, prediction_3))
-# plt.figure()
-# plt.plot(np.arange(len(y_log)), y_log, 'bo')
+
+grb_reg = GradientBoostingRegressor(random_state = 42, learning_rate = .05,
+n_estimators = 500)
+prediction_3 = cross_val_predict(grb_reg, X_train_prepared, y=y_log,
+ cv=5)
+print np.sqrt(mean_squared_error(y_log, prediction_3))
+plt.figure()
+plt.plot(np.arange(len(y_log)), y_log, 'bo')
+
+plt.plot(np.arange(len(y_log)), prediction_3, 'go')
+
+prediction_test = np.exp(prediction_3.reshape(-1,1)) - 1
+
+result = np.concatenate((y,prediction_test,(y.astype(float)) / prediction_test), axis=1)
+
+pd.DataFrame(result, columns = ['realprice', 'prediction', 'error']).to_csv('gboost.csv')
+
 #
-# plt.plot(np.arange(len(y_log)), prediction_3, 'go')
-#
-#
-# plt.show()
+plt.figure()
+data.boxplot(column = 'SalePrice')
+data.hist(column = 'SalePrice',bins = 50)
+plt.show()
